@@ -9,8 +9,8 @@ const (
 	brickSize   = 2.0
 	jumpHeight  = 2.0
 	G           = 1.0 / 80 // Gravitational acceleration while falling
-	fallTermVel = 1.0 / 20 // Terminal velocity of falling
-	penalty     = 1.0
+	fallTermVel = 1.0 / 6  // Terminal velocity of falling
+	penalty     = 4.0
 )
 
 type pole int
@@ -197,7 +197,7 @@ func (g *game) growPillars() {
 	leading := 10
 	for j := l; j < i+leading; j++ {
 		lvl := g.level(float64(j) * brickSize)
-		interval := lvl.intervalMin + rand.Intn(lvl.intervalMax-lvl.intervalMin)
+		interval := lvl.interval
 		g.leftPillar = append(g.leftPillar, brick{interval, rand.Intn(interval)})
 		g.rightPillar = append(g.rightPillar, brick{interval, rand.Intn(interval)})
 	}
