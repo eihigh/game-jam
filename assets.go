@@ -5,6 +5,8 @@ import (
 	"embed"
 	"image"
 
+	"github.com/eihigh/canvas"
+	renderer "github.com/eihigh/canvas/renderers/ebiten"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -17,11 +19,62 @@ import (
 //go:embed assets
 var FS embed.FS
 
-// ファイルパスをキー、画像データを値としたmapに、ゲーム中で使う画像すべてを格納します。
-
 var (
+	// ファイルパスをキー、画像データを値としたmapに、ゲーム中で使う画像すべてを格納します。
 	images = map[string]*ebiten.Image{}
+
+	font *canvas.FontFamily
 )
+
+func loadAssets() error {
+	// Load font
+	font = canvas.NewFontFamily("times")
+	if err := font.LoadFontFileFS(FS, "assets/NimbusRomNo9L-Reg.otf", canvas.FontRegular); err != nil {
+		return err
+	}
+
+	// Load images
+	for _, img := range []string{
+		"assets/man.png",
+		"assets/sky.png",
+		"assets/bg_fire.jpeg",
+	} {
+		if err := loadImage(img); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func makeAssets() error {
+	bw, bh := ps*brickSize, ps*brickSize
+
+	// Make brick images
+	face := font.Face(bh*0.6, canvas.White, canvas.FontRegular, canvas.FontNormal)
+	N := ebiten.NewImage(int(bw), int(bh))
+	r := renderer.New(N)
+	c := canvas.NewContext(r)
+	c.SetFillColor(canvas.Red)
+	c.SetStrokeColor(canvas.Black)
+	c.SetStrokeWidth(1)
+	c.DrawPath(0, 0, canvas.Rectangle(bw, bh))
+	text := canvas.NewTextBox(face, "N", bw, bh, canvas.Center, canvas.Center, 0, 0)
+	c.DrawText(0, 0, text)
+	images["gen/N"] = N
+
+	S := ebiten.NewImage(int(bw), int(bh))
+	r = renderer.New(S)
+	c = canvas.NewContext(r)
+	c.SetFillColor(canvas.Blue)
+	c.SetStrokeColor(canvas.Black)
+	c.SetStrokeWidth(1)
+	c.DrawPath(0, 0, canvas.Rectangle(bw, bh))
+	text = canvas.NewTextBox(face, "S", bw, bh, canvas.Center, canvas.Center, 0, 0)
+	c.DrawText(0, 0, text)
+	images["gen/S"] = S
+
+	return nil
+}
 
 func loadImage(name string) error {
 	// embed.FSのメソッド ReadFile は、ファイルの内容を丸ごと []byte として読み込みます。

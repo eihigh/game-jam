@@ -4,7 +4,9 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	_ "image/jpeg"
 	_ "image/png"
 )
 
@@ -14,31 +16,20 @@ const (
 )
 
 var (
-	// 画面サイズです。どこでも使えるようにグローバル変数にすると便利です。
-	vw, vh = 400, 400
 	// Updateが呼ばれることを、Ebitenでは tick と呼びます。
 	tick = 0
 	// Draw が呼ばれることを、Ebitenでは frame と呼びます。
 	frame = 0
 )
 
-// ebiten.Game interface を満たす型がEbitenには必要なので、この game 構造体に
-// Update, Draw, Layout 関数を持たせます。
-type game struct{}
-
 // ゲームを初期化します。
 func newGame() (*game, error) {
 	g := &game{}
-
 	// Load Assets.
-	for _, name := range []string{
-		"assets/jisyaku_bou.png",
-	} {
-		if err := loadImage(name); err != nil {
-			return nil, err
-		}
+	if err := loadAssets(); err != nil {
+		return nil, err
 	}
-
+	g.restart()
 	return g, nil
 }
 
@@ -46,22 +37,30 @@ func newGame() (*game, error) {
 // 常に毎秒60回呼ばれます（既定値）。
 // 描画ではなく更新処理を行うことが推奨されます。
 func (g *game) Update() error {
+	if tick == 0 {
+		// makeAssets is only available after RunGame
+		if err := makeAssets(); err != nil {
+			return err
+		}
+	}
 	tick++
-	return nil
+
+	jump := inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
+		inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+		len(inpututil.AppendJustPressedTouchIDs(nil)) != 0
+
+	i := &input{
+		jump: jump,
+	}
+
+	return g.update(i)
 }
 
 // Draw関数は、画面のリフレッシュレートと同期して呼ばれます（既定値）。
 // 描画処理のみを行うことが推奨されます。ここで状態の変更を行うといろいろ事故ります。
 func (g *game) Draw(screen *ebiten.Image) {
 	frame++
-
-	op := &ebiten.DrawImageOptions{}
-	i := images["assets/jisyaku_bou.png"]
-	w, h := i.Size()
-	op.GeoM.Translate(-float64(w)/2, -float64(h)/2)
-	e := float64(tick) / 30
-	op.GeoM.Rotate(tau * e)
-	screen.DrawImage(images["assets/jisyaku_bou.png"], op)
+	g.draw(screen)
 }
 
 // Layout関数は、ウィンドウのリサイズの挙動を決定します。とりあえず常に画面サイズを返せば無難です。
@@ -82,7 +81,7 @@ func _main() error {
 		return err
 	}
 	// ウィンドウタイトルを変更します。
-	ebiten.SetWindowTitle("Ebitengine Game Jam")
+	ebiten.SetWindowTitle("Climbing Magnet Man")
 	// ウィンドウサイズを決定します。
 	ebiten.SetWindowSize(vw, vh)
 	// ゲームスタート！
